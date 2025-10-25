@@ -20,8 +20,21 @@ A lightweight **system health monitoring tool** for Linux that combines **Bash**
 
 ---
 
-## Architecture Overview
+## Requirements & Installation
 
+The project works on **Ubuntu** or **WSL (Windows Subsystem for Linux)** with standard packages.  
+To ensure everything is installed and ready, run these commands:
+
+```bash
+# Install Python and required utilities
+sudo apt install -y python3 python3-pip python3-psutil python3-venv
+
+# Optional: install mail utilities for email alerts
+sudo apt install -y bsd-mailx
+
+# Ensure bash and core utilities are available (usually preinstalled)
+sudo apt install -y bash coreutils
+```
 
 ---
 ## live “dashboard” mode in the terminal
