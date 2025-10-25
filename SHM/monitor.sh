@@ -1,12 +1,12 @@
-cat > monitor.sh <<'SH'
 #!/usr/bin/env bash
 set -euo pipefail
 
+# ===== Configuration =====
 : "${CPU_WARN:=85}"
 : "${RAM_WARN:=90}"
 : "${NET_WARN_Mbps:=200}"
 : "${SAMPLE_SECONDS:=2}"
-: "${LOG_DIR:=/var/log/syshealth}"
+: "${LOG_DIR:=$HOME/.local/var/syshealth}"
 : "${EMAIL_TO:=}"
 : "${SMTP_HOST:=}"
 : "${SMTP_PORT:=587}"
@@ -14,29 +14,35 @@ set -euo pipefail
 : "${SMTP_PASS:=}"
 : "${SMTP_STARTTLS:=1}"
 
-# Ensure LOG_DIR exists and is writable
-if [[ "$LOG_DIR" != /* ]]; then
-  echo "LOG_DIR must be an absolute path. Got: $LOG_DIR" >&2
-  exit 1
-fi
-mkdir -p "$LOG_DIR" || true
+# ===== Setup =====
+mkdir -p "$LOG_DIR"
 
-# Python venv
-APP_DIR="${HOME}/.local/share/syshealth"
-PYENV_DIR="${APP_DIR}/venv"
-mkdir -p "$APP_DIR"
-if [[ ! -d "$PYENV_DIR" ]]; then
-  python3 -m venv "$PYENV_DIR"
-fi
-
-# shellcheck disable=SC1090
-source "$PYENV_DIR/bin/activate"
-python -m pip -q install --upgrade pip >/dev/null
-python -m pip -q install psutil >/dev/null
-
-# Export config for Python
+# Export config so Python can read it
 export CPU_WARN RAM_WARN NET_WARN_Mbps SAMPLE_SECONDS LOG_DIR EMAIL_TO \
        SMTP_HOST SMTP_PORT SMTP_USER SMTP_PASS SMTP_STARTTLS
 
-exec python ./monitor.py
-SH
+# ===== Run and capture output =====
+echo "--------------------------------------------------"
+echo " 🧩  Running System Health Monitor"
+echo "--------------------------------------------------"
+echo "CPU Warn: ${CPU_WARN}% | RAM Warn: ${RAM_WARN}% | NET Warn: ${NET_WARN_Mbps} Mbps"
+echo "Sample interval: ${SAMPLE_SECONDS}s"
+echo "Logs stored in: ${LOG_DIR}"
+echo "--------------------------------------------------"
+
+# Run the Python collector and capture its output
+output=$(python3 ./monitor.py 2>&1)
+
+# Display result from Python
+echo "$output"
+echo "--------------------------------------------------"
+
+# Highlight alert conditions if they appear
+if echo "$output" | grep -q "Alert"; then
+    echo "🚨 ALERT DETECTED!"
+else
+    echo "✅ System within normal parameters."
+fi
+
+echo "Done."
+echo "--------------------------------------------------"
