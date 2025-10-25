@@ -1,19 +1,27 @@
 # System Health Monitor (Linux)
 
-A lightweight system health monitoring tool for Linux that combines **Bash** and **Python** to track **CPU**, **memory**, and **network usage** — with logging and alerting capabilities.
+A lightweight **system health monitoring tool** for Linux that combines **Bash** and **Python** to track **CPU**, **memory**, and **network usage** — with live terminal status, structured logging, and alerting capabilities.
 
 ---
 
 ## Features
 
-- **Hybrid Bash + Python design** — uses Bash for environment setup and Python for metrics collection  
+- **Hybrid Bash + Python design**  
+  Bash handles configuration and orchestration; Python collects and logs system metrics.  
 - **CPU / RAM / Network utilization tracking**  
-- **Structured logging** in both CSV and JSONL formats  
-- **Alerting system**
-  - Terminal notifications via `wall`
-  - Optional email alerts via `mail` or SMTP
+- **Structured logging**  
+  Outputs both `.csv` and `.jsonl` for easy integration with dashboards or data tools.  
+- **Alerting system**  
+  - Terminal notifications via `wall`  
+  - Optional email alerts via `mail` or SMTP  
 - **Configurable thresholds** via environment variables  
-- **Runs on cron or systemd timer** for automation  
+- **Automatable** — run via `cron` or `systemd`  
+- **Live dashboard mode** — real-time updates in the terminal
+
+---
+
+## Architecture Overview
+
 
 ---
 ## live “dashboard” mode in the terminal
