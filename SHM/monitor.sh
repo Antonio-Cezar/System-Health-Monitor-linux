@@ -23,7 +23,7 @@ export CPU_WARN RAM_WARN NET_WARN_Mbps SAMPLE_SECONDS LOG_DIR EMAIL_TO \
 
 run_once() {
   echo "--------------------------------------------------"
-  echo " 🧩  Running System Health Monitor"
+  echo "Running System Health Monitor"
   echo "--------------------------------------------------"
   echo "CPU Warn: ${CPU_WARN}% | RAM Warn: ${RAM_WARN}% | NET Warn: ${NET_WARN_Mbps} Mbps"
   echo "Sample interval: ${SAMPLE_SECONDS}s"
@@ -34,9 +34,9 @@ run_once() {
   echo "$output"
   echo "--------------------------------------------------"
   if echo "$output" | grep -q "Alert"; then
-      echo "🚨 ALERT DETECTED!"
+      echo "!!!ALERT DETECTED!!!"
   else
-      echo "✅ System within normal parameters."
+      echo "System within normal parameters."
   fi
   echo "Done."
   echo "--------------------------------------------------"
