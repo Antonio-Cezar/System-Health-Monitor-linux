@@ -1,4 +1,4 @@
-#!/usr/bin/env bash
+'#!/usr/bin/env bash
 set -euo pipefail
 
 # ====== Konfigurerbare terskler (kan overrides via miljøvariabler) ======
