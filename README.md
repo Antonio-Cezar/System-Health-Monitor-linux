@@ -16,6 +16,15 @@ A lightweight system health monitoring tool for Linux that combines **Bash** and
 - **Runs on cron or systemd timer** for automation  
 
 ---
+## live “dashboard” mode in the terminal
 
-## Architecture Overview
+``` bash
+chmod +x monitor.sh
+WATCH=1 WATCH_INTERVAL=10 SAMPLE_SECONDS=5 ./monitor.sh
+```
 
+---
+
+## Examples
+![Live 1](/SHM/images/1.jpg)
+![Live 2](/SHM/images/2.jpg)
