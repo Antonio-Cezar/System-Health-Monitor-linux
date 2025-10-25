@@ -1,22 +1,22 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# ====== Konfigurerbare terskler (kan overrides via miljøvariabler) ======
-: "${CPU_WARN:=85}"             # i prosent
-: "${RAM_WARN:=90}"             # i prosent
-: "${NET_WARN_Mbps:=200}"       # total (TX+RX) i Mbps
-: "${SAMPLE_SECONDS:=2}"        # måleintervall for nettverksrate
-: "${LOG_DIR:=/var/log/syshealth}"  # loggkatalog (bytt til $HOME/.local/var/syshealth hvis ønskelig)
-: "${EMAIL_TO:=}"               # sett til "navn@domene.no" for e-postvarsling
-: "${SMTP_HOST:=}"              # hvis ikke /usr/bin/mail finnes, bruk enkel SMTP via Python
+# ====== Config (can be overridden via env) ======
+: "${CPU_WARN:=85}"
+: "${RAM_WARN:=90}"
+: "${NET_WARN_Mbps:=200}"
+: "${SAMPLE_SECONDS:=2}"
+: "${LOG_DIR:=/var/log/syshealth}"
+: "${EMAIL_TO:=}"
+: "${SMTP_HOST:=}"
 : "${SMTP_PORT:=587}"
 : "${SMTP_USER:=}"
 : "${SMTP_PASS:=}"
-: "${SMTP_STARTTLS:=1}"         # 1=true, 0=false
+: "${SMTP_STARTTLS:=1}"
 
-# ====== Klargjør miljø ======
+# ====== Prep dirs ======
 if [[ "$LOG_DIR" != /* ]]; then
-  echo "LOG_DIR må være en absolutt sti. Fikk: $LOG_DIR" >&2
+  echo "LOG_DIR must be an absolute path. Got: $LOG_DIR" >&2
   exit 1
 fi
 
@@ -27,10 +27,9 @@ APP_DIR="${HOME}/.local/share/syshealth"
 PYENV_DIR="${APP_DIR}/venv"
 mkdir -p "$APP_DIR"
 
-# ====== Skriv/oppdater Python-script om det ikke finnes ======
+# ====== Write monitor.py (heredoc) ======
 PY="${APP_DIR}/monitor.py"
-if [[ ! -f "$PY" ]]; then
-  cat > "$PY" <<'PYCODE'
+cat > "$PY" <<'PYCODE'
 #!/usr/bin/env python3
 import os, time, json, csv, shutil, subprocess, socket
 from datetime import datetime
@@ -39,7 +38,7 @@ from pathlib import Path
 try:
     import psutil
 except ImportError:
-    print("psutil mangler. Kjør monitor.sh som installerer det.", flush=True)
+    print("psutil missing. Run monitor.sh to install it.", flush=True)
     raise
 
 CPU_WARN = int(os.getenv("CPU_WARN", "85"))
@@ -62,11 +61,11 @@ def now():
     return datetime.utcnow().replace(microsecond=0).isoformat() + "Z"
 
 def bytes_to_mbps(byte_delta, seconds):
-    # 8 bits per byte
     return (byte_delta * 8.0 / 1_000_000.0) / seconds
 
 def collect():
-    cpu = psutil.cpu_percent(interval=1)  # 1s glatting
+    import psutil
+    cpu = psutil.cpu_percent(interval=1)
     mem = psutil.virtual_memory().percent
     n1 = psutil.net_io_counters()
     time.sleep(max(0.0, SAMPLE_SECONDS))
@@ -77,7 +76,9 @@ def collect():
     return cpu, mem, mbps
 
 def ensure_logs():
+    LOG_DIR.mkdir(parents=True, exist_ok=True)
     if not CSV_PATH.exists():
+        import csv
         with open(CSV_PATH, "w", newline="") as f:
             w = csv.writer(f)
             w.writerow(["timestamp","host","cpu_percent","ram_percent","net_total_mbps"])
@@ -100,7 +101,6 @@ def has_cmd(cmd):
     return shutil.which(cmd) is not None
 
 def notify_terminal(message):
-    # Prøv wall (viser i alle TTY-er), ellers print
     if has_cmd("wall"):
         try:
             subprocess.run(["wall", message], check=False)
@@ -112,7 +112,6 @@ def notify_terminal(message):
 def notify_email(subject, body):
     if not EMAIL_TO:
         return
-    # 1) Bruk 'mail' hvis tilgjengelig
     if has_cmd("mail"):
         try:
             p = subprocess.Popen(["/usr/bin/mail", "-s", subject, EMAIL_TO], stdin=subprocess.PIPE)
@@ -120,7 +119,6 @@ def notify_email(subject, body):
             return
         except Exception:
             pass
-    # 2) Fallback: enkel SMTP via smtplib
     if SMTP_HOST:
         import smtplib
         from email.mime.text import MIMEText
@@ -152,30 +150,29 @@ def main():
     if alerts:
         header = f"[System Health Alert @ {ts} on {HOST}]"
         msg = header + "\n" + "\n".join(f"- {a}" for a in alerts) + "\n" + \
-              f"\nLogg: {CSV_PATH}"
+              f"\nLog: {CSV_PATH}"
         notify_terminal(msg)
         notify_email("System Health Alert", msg)
 
-    # skriv kort utskrift også ved normal kjøring
     print(f"{ts} cpu={cpu:.1f}% ram={mem:.1f}% net={mbps:.3f}Mbps")
 
 if __name__ == "__main__":
     main()
 PYCODE
-  chmod +x "$PY"
-fi
 
-# ====== Virtuell env + avhengigheter ======
+chmod +x "$PY"
+
+# ====== Python venv + deps ======
 if [[ ! -d "$PYENV_DIR" ]]; then
   python3 -m venv "$PYENV_DIR"
 fi
 # shellcheck disable=SC1090
 source "$PYENV_DIR/bin/activate"
-pip -q install --upgrade pip >/dev/null
-pip -q install psutil >/dev/null
+python -m pip -q install --upgrade pip >/dev/null
+python -m pip -q install psutil >/dev/null
 
-# ====== Kjør ======
+# ====== Export config & run ======
 export CPU_WARN RAM_WARN NET_WARN_Mbps SAMPLE_SECONDS LOG_DIR EMAIL_TO \
        SMTP_HOST SMTP_PORT SMTP_USER SMTP_PASS SMTP_STARTTLS
 
-python "$PY"
+exec python "$PY"
