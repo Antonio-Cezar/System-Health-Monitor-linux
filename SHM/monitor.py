@@ -1,4 +1,3 @@
-cat > monitor.py <<'PY'
 #!/usr/bin/env python3
 import os, time, json, csv, shutil, subprocess, socket
 from datetime import datetime
@@ -7,14 +6,17 @@ from pathlib import Path
 try:
     import psutil
 except ImportError:
-    print("psutil missing. Install with: pip install psutil", flush=True)
+    print("psutil missing. Install it with: pip install psutil")
     raise
 
+# Defaults (you can override via env)
 CPU_WARN = int(os.getenv("CPU_WARN", "85"))
 RAM_WARN = int(os.getenv("RAM_WARN", "90"))
 NET_WARN_Mbps = float(os.getenv("NET_WARN_Mbps", "200"))
 SAMPLE_SECONDS = float(os.getenv("SAMPLE_SECONDS", "2"))
-LOG_DIR = Path(os.getenv("LOG_DIR", "/var/log/syshealth"))
+
+# Use a user-writable default on WSL to avoid /var/log permissions
+LOG_DIR = Path(os.getenv("LOG_DIR", str(Path.home() / ".local/var/syshealth")))
 EMAIL_TO = os.getenv("EMAIL_TO", "").strip()
 SMTP_HOST = os.getenv("SMTP_HOST", "").strip()
 SMTP_PORT = int(os.getenv("SMTP_PORT", "587"))
@@ -52,18 +54,6 @@ def ensure_logs():
     if not JSONL_PATH.exists():
         JSONL_PATH.touch()
 
-def append_logs(ts, cpu, mem, mbps):
-    with open(CSV_PATH, "a", newline="") as f:
-        w = csv.writer(f)
-        w.writerow([ts, HOST, f"{cpu:.1f}", f"{mem:.1f}", f"{mbps:.3f}"])
-    with open(JSONL_PATH, "a") as f:
-        f.write(json.dumps({
-            "timestamp": ts, "host": HOST,
-            "cpu_percent": round(cpu,1),
-            "ram_percent": round(mem,1),
-            "net_total_mbps": round(mbps,3)
-        }) + "\n")
-
 def has_cmd(cmd):
     return shutil.which(cmd) is not None
 
@@ -100,11 +90,22 @@ def notify_email(subject, body):
                 s.login(SMTP_USER, SMTP_PASS)
             s.send_message(msg)
 
+def append_logs(ts, cpu, mem, mbps):
+    with open(CSV_PATH, "a", newline="") as f:
+        w = csv.writer(f)
+        w.writerow([ts, HOST, f"{cpu:.1f}", f"{mem:.1f}", f"{mbps:.3f}"])
+    with open(JSONL_PATH, "a") as f:
+        f.write(json.dumps({
+            "timestamp": ts, "host": HOST,
+            "cpu_percent": round(cpu,1),
+            "ram_percent": round(mem,1),
+            "net_total_mbps": round(mbps,3)
+        }) + "\n")
+
 def main():
     ensure_logs()
     cpu, mem, mbps = collect()
     ts = now()
-    append_logs(ts, cpu, mem, mbps)
 
     alerts = []
     if cpu >= CPU_WARN:
@@ -113,6 +114,8 @@ def main():
         alerts.append(f"RAM {mem:.1f}% ≥ {RAM_WARN}%")
     if mbps >= NET_WARN_Mbps:
         alerts.append(f"NET {mbps:.1f} Mbps ≥ {NET_WARN_Mbps} Mbps")
+
+    append_logs(ts, cpu, mem, mbps)
 
     if alerts:
         header = f"[System Health Alert @ {ts} on {HOST}]"
@@ -125,4 +128,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-PY
