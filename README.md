@@ -27,4 +27,6 @@ WATCH=1 WATCH_INTERVAL=10 SAMPLE_SECONDS=5 ./monitor.sh
 
 ## Examples
 ![Live 1](/SHM/images/1.jpg)
+
+---
 ![Live 2](/SHM/images/2.jpg)
