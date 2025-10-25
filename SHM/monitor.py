@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 import os, time, json, csv, shutil, subprocess, socket
-from datetime import datetime
+from datetime import datetime, timezone
 from pathlib import Path
 
 try:
@@ -29,7 +29,7 @@ JSONL_PATH = LOG_DIR / "metrics.jsonl"
 HOST = socket.gethostname()
 
 def now():
-    return datetime.utcnow().replace(microsecond=0).isoformat() + "Z"
+    return datetime.now(timezone.utc).replace(microsecond=0).isoformat()
 
 def bytes_to_mbps(byte_delta, seconds):
     return (byte_delta * 8.0 / 1_000_000.0) / seconds
